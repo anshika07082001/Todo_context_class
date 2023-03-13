@@ -9,27 +9,37 @@ export class Main extends Component {
   constructor(props) {
     super(props);
 
+    // ref created for add new todo input box
     this.inpRef = createRef();
+    // ref created for search todo input box
     this.searchRef = createRef();
 
     this.state = {
+      // state for todo data
       todoData: [],
+      // state for search todo data
+      searchTodo: [],
+      // state for theme
       theme: "light",
+      // state for loader
       loader: true,
     };
   }
 
+  // fetching of data in componentdidmount
   componentDidMount() {
     fetch("https://dummyjson.com/todos")
       .then((res) => res.json())
       .then((result) => {
         this.setState({
           todoData: result.todos,
+          searchTodo: result.todos,
           loader: false,
         });
       });
   }
 
+  // function to add newtodo
   addTodo = () => {
     let todoTitle = this.inpRef.current.value;
     let obj = {
@@ -39,8 +49,10 @@ export class Main extends Component {
       userId: Math.floor(Math.random() * 100),
     };
     this.state.todoData.push(obj);
+    this.state.searchTodo = this.state.todoData;
     this.setState({
       todoData: this.state.todoData,
+      searchTodo: this.state.searchTodo,
       loader: true,
     });
     setTimeout(() => {
@@ -51,6 +63,7 @@ export class Main extends Component {
     this.inpRef.current.value = "";
   };
 
+  // function to change status to complete or incomplete
   checkHandler = (id) => {
     let itemId = (ele) => ele.id === id;
     let index = this.state.todoData.findIndex(itemId);
@@ -65,6 +78,7 @@ export class Main extends Component {
     });
   };
 
+  // function to change the theme in light or dark
   switchHandler = (e) => {
     if (e.target.checked) {
       this.setState({
@@ -77,20 +91,53 @@ export class Main extends Component {
     }
   };
 
+  // function to search todo on change of inputfield
+  searchHandler = () => {
+    this.state.searchTodo = [];
+    let val = this.searchRef.current.value;
+    this.state.todoData.map((item, i) => {
+      // conditions to check whether the filled input is present in todo array or not
+      if (
+        item.todo
+          .toString()
+          .toLocaleLowerCase()
+          .includes(val.toString().toLocaleLowerCase())
+      ) {
+        this.state.searchTodo.push(item);
+      }
+      if (
+        !item.todo
+          .toString()
+          .toLocaleLowerCase()
+          .includes(val.toString().toLocaleLowerCase())
+      ) {
+        this.state.searchTodo.splice(i, 1);
+      }
+    });
+    this.setState({
+      searchTodo: this.state.searchTodo,
+    });
+  };
+
   render() {
     return (
+      // loader context provider
       <LoaderProvider value={{ loader: this.state.loader }}>
+        {/* theme context provider */}
         <ThemeProvider value={{ theme: this.state.theme }}>
           <div
-            className={`${
-              this.state.theme === "light" ? "bg-light text-dark" : ""
-            } ${
+            className={`${this.state.theme === "light" ? " text-dark" : ""} ${
               this.state.theme === "dark" ? "bg-dark text-light" : ""
             } col-12 m-auto text-center`}
           >
             <h2>Todo App</h2>
-            <SearchTodo searchRef={this.searchRef} />
+            {/* todo context provider */}
+            <TodoProvider value={{ ref: this.searchRef }}>
+              {/* rendering of search input component */}
+              <SearchTodo searchHandler={this.searchHandler} />
+            </TodoProvider>
             <div className="col-10 d-flex flex-row m-auto border rounded p-1 mt-3">
+              {/* rendering of input box for adding new todo */}
               <input
                 className="border-0 col-9 rounded"
                 placeholder="Add New Todo..."
@@ -100,8 +147,9 @@ export class Main extends Component {
                 Add New Task
               </button>
             </div>
-
-            <TodoProvider value={{ todoData: this.state.todoData }}>
+            {/* todo context provider */}
+            <TodoProvider value={{ searchTodo: this.state.searchTodo }}>
+              {/* rendering of todo component */}
               <Todo
                 checkHandler={this.checkHandler}
                 switchHandler={this.switchHandler}
